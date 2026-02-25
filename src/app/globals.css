@@ -1,9 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
-@plugin "tailwindcss-animate";
+@import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ─── BainbridgeAI Design Tokens ──────────────────────────────────────────── */
 @theme {
-  /* BainbridgeAI Design System */
+  /* Brand colors */
   --color-background: #0A0F1A;
   --color-surface: #111827;
   --color-surface-light: #1A2332;
@@ -30,51 +33,126 @@
   --radius-sm: calc(0.5rem - 4px);
 }
 
+/* ─── shadcn/ui CSS Variables (dark theme — always-on) ───────────────────── */
+:root {
+  /* Background / Foreground */
+  --background: 214 44% 8%;        /* #0A0F1A */
+  --foreground: 213 31% 95%;       /* #F1F5F9 */
+
+  /* Card */
+  --card: 221 39% 11%;             /* #111827 */
+  --card-foreground: 213 31% 95%;
+
+  /* Popover */
+  --popover: 221 39% 11%;
+  --popover-foreground: 213 31% 95%;
+
+  /* Primary = accent #00C2FF */
+  --primary: 197 100% 50%;
+  --primary-foreground: 214 44% 8%;
+
+  /* Secondary = surface-light */
+  --secondary: 217 33% 17%;        /* #1A2332 */
+  --secondary-foreground: 213 31% 95%;
+
+  /* Muted */
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 55%; /* #64748B */
+
+  /* Accent (shadcn accent slot = secondary surface) */
+  --accent: 217 33% 17%;
+  --accent-foreground: 213 31% 95%;
+
+  /* Destructive = error red */
+  --destructive: 0 84% 60%;        /* #EF4444 */
+  --destructive-foreground: 213 31% 95%;
+
+  /* Border / Input / Ring */
+  --border: 214 39% 18%;           /* #1E2D3D */
+  --input: 214 39% 18%;
+  --ring: 197 100% 50%;            /* accent as ring */
+
+  /* Radius */
+  --radius: 0.5rem;
+
+  /* Charts */
+  --chart-1: 197 100% 50%;         /* accent */
+  --chart-2: 142 71% 45%;          /* success */
+  --chart-3: 38 92% 50%;           /* warning */
+  --chart-4: 258 95% 76%;          /* purple */
+  --chart-5: 330 81% 60%;          /* pink */
+
+  /* Sidebar */
+  --sidebar: 221 39% 11%;
+  --sidebar-foreground: 213 31% 95%;
+  --sidebar-primary: 197 100% 50%;
+  --sidebar-primary-foreground: 214 44% 8%;
+  --sidebar-accent: 217 33% 17%;
+  --sidebar-accent-foreground: 213 31% 95%;
+  --sidebar-border: 214 39% 18%;
+  --sidebar-ring: 197 100% 50%;
+}
+
+/* ─── Tailwind v4 inline theme mapping ──────────────────────────────────────*/
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────── */
 @layer base {
   * {
-    border-color: #1E2D3D;
+    @apply border-border outline-ring/50;
   }
 
   body {
-    background-color: #0A0F1A;
-    color: #F1F5F9;
+    @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* shadcn/ui CSS variables */
-:root {
-  --background: 214 44% 8%;
-  --foreground: 213 31% 95%;
-  --card: 221 39% 11%;
-  --card-foreground: 213 31% 95%;
-  --popover: 221 39% 11%;
-  --popover-foreground: 213 31% 95%;
-  --primary: 197 100% 50%;
-  --primary-foreground: 214 44% 8%;
-  --secondary: 217 33% 17%;
-  --secondary-foreground: 213 31% 95%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 55%;
-  --accent: 197 100% 50%;
-  --accent-foreground: 214 44% 8%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 213 31% 95%;
-  --border: 215 28% 17%;
-  --input: 215 28% 17%;
-  --ring: 197 100% 50%;
-  --radius: 0.5rem;
-}
-
-/* AI indicator diamond */
+/* ─── AI diamond indicator ───────────────────────────────────────────────── */
 .ai-indicator::before {
   content: "◆ ";
   color: #00C2FF;
   font-size: 0.75em;
 }
 
-/* Scrollbar styling */
+/* ─── Scrollbar styling ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0A0F1A; }
 ::-webkit-scrollbar-thumb { background: #1E2D3D; border-radius: 3px; }
