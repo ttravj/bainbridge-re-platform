@@ -1,15 +1,830 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  AGENT
+  TEAM_LEAD
+  BROKER
+  ADMIN
+}
+
+enum OrganizationType {
+  BROKERAGE
+  TEAM
+  SOLO
+}
+
+enum OrganizationPlan {
+  FREE
+  AGENT
+  AGENT_PRO
+  TEAM
+  BROKERAGE
+  ENTERPRISE
+}
+
+enum ContactType {
+  CLIENT
+  LEAD
+  PAST_CLIENT
+  REFERRAL_PARTNER
+  VENDOR
+}
+
+enum ContactStage {
+  NEW
+  NURTURE
+  ACTIVE
+  UNDER_CONTRACT
+  CLOSED
+  LOST
+}
+
+enum TemperatureRating {
+  HOT
+  WARM
+  COLD
+}
+
+enum ContactSource {
+  SOI
+  REFERRAL
+  ZILLOW
+  REALTOR_COM
+  FACEBOOK
+  GOOGLE
+  OPEN_HOUSE
+  FARMING
+  FSBO
+  EXPIRED
+  COLD_CALL
+  BROKERAGE_PROVIDED
+  OTHER
+}
+
+enum TransactionType {
+  LISTING
+  BUYER_DEAL
+  LEASE
+  REFERRAL
+}
+
+enum TransactionStatus {
+  PROSPECT
+  ACTIVE
+  UNDER_CONTRACT
+  CLOSED
+  CANCELLED
+  EXPIRED
+}
+
+enum BuyerPhase {
+  CONSULTATION
+  SEARCHING
+  OFFER
+  UNDER_CONTRACT
+  CLOSING
+  CLOSED
+}
+
+enum DeadlineType {
+  INSPECTION
+  APPRAISAL
+  LOAN
+  TITLE
+  POSSESSION
+  CUSTOM
+}
+
+enum DocumentCategory {
+  LISTING_AGREEMENT
+  PURCHASE_CONTRACT
+  ADDENDUM
+  DISCLOSURE
+  INSPECTION_REPORT
+  APPRAISAL
+  TITLE
+  CLOSING_DISCLOSURE
+  OTHER
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COUNTERED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ExpenseCategory {
+  MARKETING
+  TECHNOLOGY
+  EDUCATION
+  TRANSPORTATION
+  PROFESSIONAL_FEES
+  INSURANCE
+  OFFICE
+  LEADS
+  ENTERTAINMENT
+  OTHER
+}
+
+enum GCIRecordType {
+  COMMISSION
+  REFERRAL_FEE
+  BONUS
+  OTHER
+}
+
+enum CampaignType {
+  EMAIL
+  TEXT
+  DIRECT_MAIL
+  SOCIAL
+  EVENT
+  FARMING
+  PAID_ADS
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum LeadSourceCategory {
+  ONLINE_PAID
+  ONLINE_ORGANIC
+  REFERRAL
+  SOI
+  FARMING
+  PROSPECTING
+  PAST_CLIENT
+  BROKERAGE_PROVIDED
+}
+
+enum LicenseType {
+  SALESPERSON
+  BROKER
+  MANAGING_BROKER
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  INACTIVE
+}
+
+enum AIModel {
+  HAIKU
+  SONNET
+  OPUS
+}
+
+enum ContentType {
+  CMA
+  LISTING_DESCRIPTION
+  SOCIAL_POST
+  EMAIL
+  REPAIR_REQUEST
+  OFFER_LETTER
+  BUYER_PRESENTATION
+  LISTING_PRESENTATION
+  BUSINESS_PLAN
+  COMMISSION_SCRIPT
+  OTHER
+}
+
+enum ContentStatus {
+  DRAFT
+  ACCEPTED
+  EDITED
+  REJECTED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW_SENSITIVE
+  AI_INVOKE
+  EXPORT
+}
+
+// ============================================================
+// IDENTITY & ORGANIZATION
+// ============================================================
+
+model Organization {
+  id          String           @id @default(cuid())
+  name        String
+  type        OrganizationType @default(SOLO)
+  slug        String           @unique
+  plan        OrganizationPlan @default(FREE)
+  phone       String?
+  email       String?
+  website     String?
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  logoUrl     String?
+  settings    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  members        TeamMembership[]
+  users          User[]
+  contacts       Contact[]
+  transactions   Transaction[]
+  expenses       Expense[]
+  gciRecords     GCIRecord[]
+  campaigns      Campaign[]
+  leadSources    LeadSource[]
+  licenses       License[]
+  aiInteractions AIInteraction[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+  settings_rel   OrganizationSettings?
+}
+
+model User {
+  id             String    @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  email          String    @unique
+  name           String
+  passwordHash   String?
+  role           UserRole  @default(AGENT)
+  phone          String?
+  avatar         String?
+  bio            String?
+  licenseNumber  String?
+  licenseState   String?
+  licenseExpiry  DateTime?
+  isActive       Boolean   @default(true)
+  onboardingDone Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  accounts       Account[]
+  sessions       Session[]
+  memberships    TeamMembership[]
+  contacts       Contact[]        @relation("AgentContacts")
+  transactions   Transaction[]    @relation("AgentTransactions")
+  gciRecords     GCIRecord[]
+  expenses       Expense[]
+  aiInteractions AIInteraction[]
+  auditLogs      AuditLog[]
+  preferences    UserPreferences?
+  licenses       License[]
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model TeamMembership {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  role           UserRole     @default(AGENT)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ============================================================
+// CONTACTS (CRM Core)
+// ============================================================
+
+model Contact {
+  id               String            @id @default(cuid())
+  organizationId   String
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  agentId          String
+  agent            User              @relation("AgentContacts", fields: [agentId], references: [id])
+  type             ContactType       @default(LEAD)
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  preferredContact String?
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  source           ContactSource?
+  stage            ContactStage      @default(NEW)
+  temperature      TemperatureRating @default(WARM)
+  tags             String[]
+  notes            String?           @db.Text
+  doNotCall        Boolean           @default(false)
+  doNotEmail       Boolean           @default(false)
+  doNotText        Boolean           @default(false)
+  isSOI            Boolean           @default(false)
+  birthdate        DateTime?
+  anniversary      DateTime?
+  score            Int?
+  lastContactedAt  DateTime?
+  nextFollowUpAt   DateTime?
+  lifeEvents       Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  activities         ContactActivity[]
+  relationships      ContactRelationship[] @relation("ContactA")
+  relatedTo          ContactRelationship[] @relation("ContactB")
+  transactions       Transaction[]         @relation("ClientTransactions")
+  campaignContacts   CampaignContact[]
+  leadAttributions   LeadSourceAttribution[]
+
+  @@index([organizationId])
+  @@index([agentId])
+  @@index([email])
+  @@index([stage])
+  @@index([nextFollowUpAt])
+}
+
+model ContactActivity {
+  id          String   @id @default(cuid())
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  agentId     String
+  type        String
+  subject     String?
+  body        String?  @db.Text
+  notes       String?
+  outcome     String?
+  scheduledAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([contactId])
+}
+
+model ContactRelationship {
+  id         String  @id @default(cuid())
+  contactAId String
+  contactA   Contact @relation("ContactA", fields: [contactAId], references: [id])
+  contactBId String
+  contactB   Contact @relation("ContactB", fields: [contactBId], references: [id])
+  type       String
+
+  @@unique([contactAId, contactBId])
+}
+
+// ============================================================
+// PROPERTY
+// ============================================================
+
+model Property {
+  id             String   @id @default(cuid())
+  organizationId String
+  mlsNumber      String?
+  propertyType   String?
+  address        String
+  city           String
+  state          String
+  zip            String
+  yearBuilt      Int?
+  sqft           Int?
+  bedrooms       Int?
+  bathrooms      Decimal? @db.Decimal(4,1)
+  lotSize        Decimal? @db.Decimal(12,2)
+  garage         Boolean?
+  pool           Boolean?
+  avm            Decimal? @db.Decimal(12,2)
+  avmUpdatedAt   DateTime?
+  data           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([organizationId])
+  @@index([mlsNumber])
+}
+
+// ============================================================
+// TRANSACTION (Core Operational Entity)
+// ============================================================
+
+model Transaction {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+  agentId            String
+  agent              User              @relation("AgentTransactions", fields: [agentId], references: [id])
+  clientId           String?
+  client             Contact?          @relation("ClientTransactions", fields: [clientId], references: [id])
+  propertyId         String?
+  property           Property?         @relation(fields: [propertyId], references: [id])
+  type               TransactionType
+  status             TransactionStatus @default(PROSPECT)
+  mlsNumber          String?
+  listPrice          Decimal?          @db.Decimal(12,2)
+  listDate           DateTime?
+  expiryDate         DateTime?
+  offerPrice         Decimal?          @db.Decimal(12,2)
+  acceptedDate       DateTime?
+  closingDate        DateTime?
+  actualClosingDate  DateTime?
+  salePrice          Decimal?          @db.Decimal(12,2)
+  commissionRate     Decimal?          @db.Decimal(5,4)
+  commissionAmount   Decimal?          @db.Decimal(12,2)
+  agentNetCommission Decimal?          @db.Decimal(12,2)
+  notes              String?           @db.Text
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  deletedAt          DateTime?
+
+  deadlines      TransactionDeadline[]
+  documents      TransactionDocument[]
+  offers         Offer[]
+  gciRecords     GCIRecord[]
+  aiInteractions AIInteraction[]
+
+  @@index([organizationId])
+  @@index([agentId])
+  @@index([status])
+  @@index([closingDate])
+}
+
+model TransactionDeadline {
+  id            String       @id @default(cuid())
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  name          String
+  type          DeadlineType @default(CUSTOM)
+  dueDate       DateTime
+  completedAt   DateTime?
+  isContingency Boolean      @default(false)
+  notes         String?
+  createdAt     DateTime     @default(now())
+
+  @@index([transactionId])
+  @@index([dueDate])
+}
+
+model TransactionDocument {
+  id            String           @id @default(cuid())
+  transactionId String
+  transaction   Transaction      @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  name          String
+  fileUrl       String
+  fileType      String?
+  fileSize      Int?
+  category      DocumentCategory @default(OTHER)
+  uploadedById  String?
+  aiAnalyzed    Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+
+  @@index([transactionId])
+}
+
+model Offer {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  offerPrice    Decimal     @db.Decimal(12,2)
+  earnestMoney  Decimal?    @db.Decimal(10,2)
+  downPayment   Decimal?    @db.Decimal(10,2)
+  loanType      String?
+  offerDate     DateTime    @default(now())
+  expiryDate    DateTime?
+  status        OfferStatus @default(PENDING)
+  contingencies String[]
+  terms         Json?
+  notes         String?     @db.Text
+  aiDraftUsed   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([transactionId])
+}
+
+// ============================================================
+// FINANCIAL TRACKING
+// ============================================================
+
+model GCIRecord {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  agentId        String
+  agent          User          @relation(fields: [agentId], references: [id])
+  transactionId  String?
+  transaction    Transaction?  @relation(fields: [transactionId], references: [id])
+  type           GCIRecordType @default(COMMISSION)
+  amount         Decimal       @db.Decimal(12,2)
+  brokerageSplit Decimal?      @db.Decimal(12,2)
+  agentNet       Decimal?      @db.Decimal(12,2)
+  closingDate    DateTime?
+  paidDate       DateTime?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([agentId])
+  @@index([closingDate])
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  agentId        String
+  agent          User            @relation(fields: [agentId], references: [id])
+  category       ExpenseCategory
+  description    String
+  amount         Decimal         @db.Decimal(10,2)
+  date           DateTime
+  receiptUrl     String?
+  isDeductible   Boolean         @default(true)
+  transactionId  String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId])
+  @@index([agentId])
+  @@index([date])
+  @@index([category])
+}
+
+// ============================================================
+// AI & SKILLS
+// ============================================================
+
+model AIInteraction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  agentId        String
+  agent          User         @relation(fields: [agentId], references: [id])
+  transactionId  String?
+  transaction    Transaction? @relation(fields: [transactionId], references: [id])
+  skill          String
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  cachedTokens   Int          @default(0)
+  costUsd        Decimal      @db.Decimal(8,6)
+  latencyMs      Int
+  inputSummary   String?
+  wasHelpful     Boolean?
+  createdAt      DateTime     @default(now())
+
+  generatedContent AIGeneratedContent[]
+
+  @@index([organizationId])
+  @@index([agentId])
+  @@index([skill])
+  @@index([createdAt])
+}
+
+model AIGeneratedContent {
+  id            String        @id @default(cuid())
+  interactionId String
+  interaction   AIInteraction @relation(fields: [interactionId], references: [id])
+  contentType   ContentType
+  content       String        @db.Text
+  status        ContentStatus @default(DRAFT)
+  editedContent String?       @db.Text
+  transactionId String?
+  contactId     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([interactionId])
+}
+
+// ============================================================
+// MARKETING
+// ============================================================
+
+model Campaign {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  agentId        String
+  name           String
+  type           CampaignType
+  status         CampaignStatus @default(DRAFT)
+  startDate      DateTime?
+  endDate        DateTime?
+  budget         Decimal?       @db.Decimal(10,2)
+  actualCost     Decimal?       @db.Decimal(10,2)
+  metrics        Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  contacts CampaignContact[]
+
+  @@index([organizationId])
+}
+
+model CampaignContact {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id])
+  status     String   @default("PENDING")
+  sentAt     DateTime?
+
+  @@unique([campaignId, contactId])
+}
+
+model LeadSource {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  agentId        String
+  name           String
+  category       LeadSourceCategory
+  monthlyCost    Decimal?           @db.Decimal(10,2)
+  isActive       Boolean            @default(true)
+  notes          String?
+  createdAt      DateTime           @default(now())
+
+  attributions LeadSourceAttribution[]
+
+  @@index([organizationId])
+}
+
+model LeadSourceAttribution {
+  id            String     @id @default(cuid())
+  contactId     String
+  contact       Contact    @relation(fields: [contactId], references: [id])
+  leadSourceId  String
+  leadSource    LeadSource @relation(fields: [leadSourceId], references: [id])
+  transactionId String?
+  attributedAt  DateTime   @default(now())
+  convertedAt   DateTime?
+  gciValue      Decimal?   @db.Decimal(12,2)
+
+  @@index([contactId])
+  @@index([leadSourceId])
+}
+
+// ============================================================
+// COMPLIANCE & LICENSING
+// ============================================================
+
+model License {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  type           LicenseType
+  licenseNumber  String
+  state          String
+  issuedDate     DateTime?
+  expiryDate     DateTime
+  status         LicenseStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([expiryDate])
+}
+
+// ============================================================
+// ACTIVITY & NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  userId         String
+  type           String
+  title          String
+  body           String?
+  channel        NotificationChannel @default(IN_APP)
+  status         NotificationStatus  @default(PENDING)
+  actionUrl      String?
+  isRead         Boolean             @default(false)
+  scheduledFor   DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  action         AuditAction
+  entityType     String
+  entityId       String
+  changes        Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+
+model UserPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  settings  Json?
+  updatedAt DateTime @updatedAt
+}
+
+model OrganizationSettings {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  brandColors    Json?
+  logoUrl        String?
+  defaultRates   Json?
+  mlsIds         String[]
+  state          String?
+  settings       Json?
+  updatedAt      DateTime     @updatedAt
 }
